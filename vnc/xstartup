@@ -1,0 +1,29 @@
+#!/bin/bash
+export LANG=zh_CN.UTF-8
+export LC_ALL=zh_CN.UTF-8
+export LANGUAGE=zh_CN:zh
+export DISPLAY=:1
+
+
+# ── 输入法环境变量（必须在 dbus 之前导出）──
+export GTK_IM_MODULE=fcitx
+export QT_IM_MODULE=fcitx
+export XMODIFIERS=@im=fcitx
+export INPUT_METHOD=fcitx
+export SDL_IM_MODULE=fcitx
+
+# ── 启动 DBus session（startplasma-x11 依赖它）──
+if [ -z "$DBUS_SESSION_BUS_ADDRESS" ]; then
+    eval "$(dbus-launch --sh-syntax --exit-with-session)"
+    export DBUS_SESSION_BUS_ADDRESS DBUS_SESSION_BUS_PID
+fi
+
+# 把 dbus 地址写入文件，方便后续子进程继承
+echo "DBUS_SESSION_BUS_ADDRESS=${DBUS_SESSION_BUS_ADDRESS}" > /tmp/dbus-session.env
+
+# ── 启动 Fcitx5（必须在 KDE 之前，否则输入法框架无法注册）──
+fcitx5 -d --disable=wayland
+sleep 1
+
+# ── 启动 KDE Plasma ──
+exec startxfce4

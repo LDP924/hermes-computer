@@ -1,0 +1,3 @@
+/root/.hermes
+/root/ldp-startup
+/root/Desktop

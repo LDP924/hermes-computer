@@ -1,0 +1,5 @@
+FROM ghcr.io/你的GitHub用户名/hermes_computer:latest
+
+EXPOSE 7860
+
+ENTRYPOINT ["/entrypoint.sh"]
