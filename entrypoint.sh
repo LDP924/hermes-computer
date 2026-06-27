@@ -196,7 +196,7 @@ main() {
     export LANG=zh_CN.UTF-8
     export LC_ALL=zh_CN.UTF-8
     export LANGUAGE=zh_CN:zh
-    export OPENCLAW_DISABLE_BONJOUR="${OPENCLAW_DISABLE_BONJOUR:-1}"
+    export HERMES_DISABLE_BONJOUR="${HERMES_DISABLE_BONJOUR:-1}"
     export UV_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple
     start_services
 }
