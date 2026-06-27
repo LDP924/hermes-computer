@@ -1,9 +1,9 @@
 # ─────────────────────────────────────────────────────────────
 #  openclaw_computer — Xfce4 + VNC + Hermes (LDP自构建版)
-#  Base: nikolaik/python-nodejs (python3最新 + nodejs最新)
+#  Base: nikolaik/python-nodejs (python3.13 + nodejs26)
 #  所有组件均使用最新版，不锁定版本
 # ─────────────────────────────────────────────────────────────
-FROM nikolaik/python-nodejs:latest
+FROM nikolaik/python-nodejs:python3.13-nodejs26-bookworm
 
 ENV DEBIAN_FRONTEND=noninteractive \
     TZ=Asia/Shanghai \
