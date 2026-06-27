@@ -1,9 +1,9 @@
 # ─────────────────────────────────────────────────────────────
-#  hermes-computer — Xfce4 + VNC + Hermes (LDP自构建版)
-#  Base: nikolaik/python-nodejs (python3.13 + nodejs26)
+#  openclaw_computer — Xfce4 + VNC + Hermes (LDP自构建版)
+#  Base: nikolaik/python-nodejs (python3最新 + nodejs最新)
 #  所有组件均使用最新版，不锁定版本
 # ─────────────────────────────────────────────────────────────
-FROM nikolaik/python-nodejs:python3.13-nodejs26-bookworm
+FROM nikolaik/python-nodejs:latest
 
 ENV DEBIAN_FRONTEND=noninteractive \
     TZ=Asia/Shanghai \
@@ -80,6 +80,30 @@ RUN mkdir -p /etc/opt/chrome/policies/managed && \
     "RestoreOnStartupURLs": ["http://127.0.0.1:9119"]
 }
 EOF
+
+# 设置 Chrome 为 Xfce4 默认浏览器（修复任务栏点浏览器报错）
+RUN mkdir -p /root/.config && \
+    # xdg-mime 默认浏览器
+    mkdir -p /root/.local/share/applications && \
+    cat > /root/.local/share/applications/mimeapps.list << 'EOF'
+[Default Applications]
+text/html=google-chrome.desktop
+x-scheme-handler/http=google-chrome.desktop
+x-scheme-handler/https=google-chrome.desktop
+x-scheme-handler/about=google-chrome.desktop
+x-scheme-handler/unknown=google-chrome.desktop
+
+[Added Associations]
+text/html=google-chrome.desktop
+x-scheme-handler/http=google-chrome.desktop
+x-scheme-handler/https=google-chrome.desktop
+EOF
+
+# noVNC viewport patch：给vnc.html加上移动端viewport（解决手机只显示一半）
+RUN NOVNC_HTML="/usr/share/novnc/vnc.html" && \
+    if [ -f "$NOVNC_HTML" ] && ! grep -q "viewport" "$NOVNC_HTML"; then \
+        sed -i 's|<head>|<head>\n<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">|' "$NOVNC_HTML"; \
+    fi
 
 # ── 6. 持久化工具：rclone + inotify-tools ───────────────────
 RUN curl -fsSL https://rclone.org/install.sh | bash \

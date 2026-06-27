@@ -16,11 +16,14 @@ start_services() {
 
     # ── VNC 密码配置 ──────────────────────────────────────────
     if [ -n "${VNC_PASSWD}" ]; then
+        mkdir -p "${HOME}/.vnc"
         echo "${VNC_PASSWD}" | vncpasswd -f > "${HOME}/.vnc/passwd"
         chmod 600 "${HOME}/.vnc/passwd"
         VNC_SECURITY_ARGS="-SecurityTypes VncAuth"
+        VNC_AUTH_ARGS="-rfbauth ${HOME}/.vnc/passwd"
     else
         VNC_SECURITY_ARGS="-SecurityTypes None --I-KNOW-THIS-IS-INSECURE"
+        VNC_AUTH_ARGS=""
     fi
 
 
@@ -34,6 +37,7 @@ start_services() {
         -geometry "${VNC_GEOMETRY}" \
         -depth "${VNC_DEPTH}" \
         $VNC_SECURITY_ARGS \
+        $VNC_AUTH_ARGS \
         -localhost no \
         -fg \
         $DEMO_ARGS &
@@ -73,6 +77,31 @@ start_services() {
 
     # ── 启动 noVNC ───────────────────────────────────────────
     echo "[*] 启动 noVNC，监听端口 ${NOVNC_PORT}..."
+    # 创建自动跳转首页（viewport解决手机只显示一半的问题）
+    cat > "${NOVNC_PATH}/index.html" << 'HTMLEOF'
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta http-equiv="refresh" content="0; url=vnc.html?autoconnect=true&reconnect=true&reconnect_delay=2000&resize=scale&view_only=false&quality=6&compression=2">
+<title>正在连接桌面...</title>
+<style>
+  body{background:#1a1a2e;color:#cdd6f4;font-family:sans-serif;
+    display:flex;align-items:center;justify-content:center;
+    height:100vh;margin:0;flex-direction:column;gap:12px;}
+  .spinner{width:40px;height:40px;border:4px solid #313244;
+    border-top-color:#89b4fa;border-radius:50%;animation:spin 0.8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="spinner"></div>
+<p>⏳ 正在连接远程桌面...</p>
+</body>
+</html>
+HTMLEOF
+
     websockify \
         --web "${NOVNC_PATH}" \
         --heartbeat 30 \
@@ -147,16 +176,17 @@ start_services() {
 
     # ── 在 xfce4-terminal 里启动 Hermes 交互模式 ───────────
     echo "[*] 启动 Hermes 交互终端..."
-    xfce4-terminal --geometry=180x50+177+51 \
+    xfce4-terminal --geometry=160x45 \
+        -T "Hermes Agent" \
         -e /root/.local/bin/hermes \
         >/dev/null 2>&1 &
 
     # 等待窗口出现，然后置顶 30s 再恢复
     sleep 10
-    wmctrl -r "hermes" -b add,above 2>/dev/null || true
+    wmctrl -r "Hermes Agent" -b add,above 2>/dev/null || true
     sleep 30
-    wmctrl -r "hermes" -b remove,above 2>/dev/null || true
-    wmctrl -a "hermes" 2>/dev/null || true
+    wmctrl -r "Hermes Agent" -b remove,above 2>/dev/null || true
+    wmctrl -a "Hermes Agent" 2>/dev/null || true
 
     echo "[✓] 所有服务已启动，容器运行中..."
     tail -f /dev/null
@@ -166,7 +196,7 @@ main() {
     export LANG=zh_CN.UTF-8
     export LC_ALL=zh_CN.UTF-8
     export LANGUAGE=zh_CN:zh
-    export HERMES_DISABLE_BONJOUR="${HERMES_DISABLE_BONJOUR:-1}"
+    export OPENCLAW_DISABLE_BONJOUR="${OPENCLAW_DISABLE_BONJOUR:-1}"
     export UV_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple
     start_services
 }
