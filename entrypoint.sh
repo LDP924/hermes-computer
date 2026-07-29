@@ -15,26 +15,24 @@ start_services() {
     NOVNC_PATH="/usr/share/novnc"
 
     # ── VNC 密码配置 ──────────────────────────────────────────
-    # 不再允许"没传密码就裸奔"：ModelScope 的环境变量到底传不传得进来，
-    # 从容器内部没法保证，所以干脆不依赖这个前提——
-    # 传进来了用你传的，没传进来就随机生成一个并打进启动日志里，
-    # 两种情况下 VNC 都是有密码保护的，不会再出现无声裸奔的情况。
-    if [ -z "${VNC_PASSWD}" ]; then
-        VNC_PASSWD="$(python3 -c 'import secrets,string;print("".join(secrets.choice(string.ascii_letters+string.digits) for _ in range(8)))')"
-        echo "[!] 未检测到 VNC_PASSWD 环境变量，已随机生成本次 VNC 密码：${VNC_PASSWD}"
-        echo "[!] 请在容器日志中记下这个密码，或通过 -e VNC_PASSWD=xxx 固定一个"
-    fi
-    mkdir -p "${HOME}/.vnc"
-    # Python写VNC密码文件，不依赖vncpasswd命令路径
-    python3 -c "
+    # 按你的要求：没传密码就不设防，不再随机生成兜底密码。
+    # 环境变量名是 VNC_PASSWD（没有 ORD），ModelScope 创空间的环境变量
+    # 那边填的名字必须跟这个一字不差，填成 VNC_PASSWORD 之类的都读不到。
+    if [ -n "${VNC_PASSWD}" ]; then
+        mkdir -p "${HOME}/.vnc"
+        # Python写VNC密码文件，不依赖vncpasswd命令路径
+        python3 -c "
 import sys
 password = sys.argv[1]
 p = (password + chr(0)*8)[:8].encode('latin-1')
 key = bytes([int(bin(b)[2:].zfill(8)[::-1],2) for b in p])
 open('${HOME}/.vnc/passwd','wb').write(key)
 " "${VNC_PASSWD}"
-    chmod 600 "${HOME}/.vnc/passwd"
-    VNC_SECURITY_ARGS="-SecurityTypes VncAuth -rfbauth ${HOME}/.vnc/passwd"
+        chmod 600 "${HOME}/.vnc/passwd"
+        VNC_SECURITY_ARGS="-SecurityTypes VncAuth -rfbauth ${HOME}/.vnc/passwd"
+    else
+        VNC_SECURITY_ARGS="-SecurityTypes None --I-KNOW-THIS-IS-INSECURE"
+    fi
 
 
     # 清理残留锁文件（Docker 重启场景）
@@ -150,7 +148,10 @@ HTMLEOF
     # ~/.config/hermes），这里的源路径要相应改一下，命令本身照抄即可。
     if [ "${KEEP_ORIGINAL_CONF:-1}" = "1" ] && [ -d /mnt/workspace ] && [ ! -e /mnt/workspace/.hermes_origin_saved ]; then
         echo "[*] 首次启动，保存镜像自带的原版 Hermes 配置到 /mnt/workspace/hermes_origin..."
-        cp -r /root/.hermes /mnt/workspace/hermes_origin 2>/dev/null || true
+        mkdir -p /mnt/workspace/hermes_origin
+        for f in config.yaml channel_directory.json SOUL.md; do
+            [ -e "/root/.hermes/$f" ] && cp "/root/.hermes/$f" /mnt/workspace/hermes_origin/ 2>/dev/null
+        done
         touch /mnt/workspace/.hermes_origin_saved
     fi
 
