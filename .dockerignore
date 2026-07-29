@@ -1,4 +1,9 @@
 .git
 .github
+.gitignore
 README.md
+LICENSE
 *.md
+.DS_Store
+Thumbs.db
+Dockerfile.modelscope
