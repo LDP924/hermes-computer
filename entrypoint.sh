@@ -23,7 +23,15 @@ start_services() {
         # 直接用 tigervnc-common 自带的 vncpasswd，不再手写 DES——
         # 之前那版手写实现只做了位翻转，没有真正做 DES 加密，
         # 生成的文件从格式上就不是合法的密码文件，导致输入什么密码都提示不对。
-        echo "${VNC_PASSWD}" | vncpasswd -f > "${HOME}/.vnc/passwd"
+        # Trixie 上 TigerVNC 1.15 把命令改名叫 tigervncpasswd 了（从 tigervnc-common
+        # 挪到了 tigervnc-tools 包），Bookworm 上还是老名字 vncpasswd——两个都探测一下，
+        # 不管以后跑在哪个 Debian 版本上都不用再改这一行。
+        VNCPASSWD_BIN="$(command -v tigervncpasswd || command -v vncpasswd)"
+        if [ -z "$VNCPASSWD_BIN" ]; then
+            echo "[!] 找不到 tigervncpasswd/vncpasswd，VNC 密码没设上，请检查 tigervnc-tools 是否装了"
+        else
+            echo "${VNC_PASSWD}" | "$VNCPASSWD_BIN" -f > "${HOME}/.vnc/passwd"
+        fi
         chmod 600 "${HOME}/.vnc/passwd"
         VNC_SECURITY_ARGS="-SecurityTypes VncAuth -rfbauth ${HOME}/.vnc/passwd"
     else
