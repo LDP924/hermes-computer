@@ -20,14 +20,10 @@ start_services() {
     # 那边填的名字必须跟这个一字不差，填成 VNC_PASSWORD 之类的都读不到。
     if [ -n "${VNC_PASSWD}" ]; then
         mkdir -p "${HOME}/.vnc"
-        # Python写VNC密码文件，不依赖vncpasswd命令路径
-        python3 -c "
-import sys
-password = sys.argv[1]
-p = (password + chr(0)*8)[:8].encode('latin-1')
-key = bytes([int(bin(b)[2:].zfill(8)[::-1],2) for b in p])
-open('${HOME}/.vnc/passwd','wb').write(key)
-" "${VNC_PASSWD}"
+        # 直接用 tigervnc-common 自带的 vncpasswd，不再手写 DES——
+        # 之前那版手写实现只做了位翻转，没有真正做 DES 加密，
+        # 生成的文件从格式上就不是合法的密码文件，导致输入什么密码都提示不对。
+        echo "${VNC_PASSWD}" | vncpasswd -f > "${HOME}/.vnc/passwd"
         chmod 600 "${HOME}/.vnc/passwd"
         VNC_SECURITY_ARGS="-SecurityTypes VncAuth -rfbauth ${HOME}/.vnc/passwd"
     else
