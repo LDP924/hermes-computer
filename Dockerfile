@@ -39,12 +39,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     xdotool \
     && rm -rf /var/lib/apt/lists/*
 
-# ── 3. TigerVNC + noVNC（最新）──────────────────────────────
+# ── 3. TigerVNC + noVNC + 桌面与输入法 ──────────────────────────────
 RUN apt-get update && apt-get install -y --no-install-recommends \
     tigervnc-standalone-server \
     tigervnc-common \
+    tigervnc-tools \
     novnc \
     websockify \
+    xfce4 \
+    xfce4-terminal \
+    fcitx5 \
+    fcitx5-chinese-addons \
+    fonts-noto-cjk \
+    dbus-x11 \
+    xdotool \
     && rm -rf /var/lib/apt/lists/*
 
 # ── 4. Fcitx5 中文输入法（最新）────────────────────────────
