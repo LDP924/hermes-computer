@@ -18,24 +18,29 @@ start_services() {
     # 按你的要求：没传密码就不设防，不再随机生成兜底密码。
     # 环境变量名是 VNC_PASSWD（没有 ORD），ModelScope 创空间的环境变量
     # 那边填的名字必须跟这个一字不差，填成 VNC_PASSWORD 之类的都读不到。
+    VNC_SECURITY_ARGS="-SecurityTypes None --I-KNOW-THIS-IS-INSECURE"
     if [ -n "${VNC_PASSWD}" ]; then
         mkdir -p "${HOME}/.vnc"
-        # 直接用 tigervnc-common 自带的 vncpasswd，不再手写 DES——
-        # 之前那版手写实现只做了位翻转，没有真正做 DES 加密，
-        # 生成的文件从格式上就不是合法的密码文件，导致输入什么密码都提示不对。
         # Trixie 上 TigerVNC 1.15 把命令改名叫 tigervncpasswd 了（从 tigervnc-common
         # 挪到了 tigervnc-tools 包），Bookworm 上还是老名字 vncpasswd——两个都探测一下，
         # 不管以后跑在哪个 Debian 版本上都不用再改这一行。
         VNCPASSWD_BIN="$(command -v tigervncpasswd || command -v vncpasswd)"
         if [ -z "$VNCPASSWD_BIN" ]; then
             echo "[!] 找不到 tigervncpasswd/vncpasswd，VNC 密码没设上，请检查 tigervnc-tools 是否装了"
+            echo "[!] 本次先按无密码模式启动，不让密码生成失败连累整个 VNC 服务器起不来"
         else
             echo "${VNC_PASSWD}" | "$VNCPASSWD_BIN" -f > "${HOME}/.vnc/passwd"
+            # 只有文件真的生成出来了，才切到需要密码的模式——
+            # 上一版这里是无条件切换，密码没生成成功也照样指向一个不存在的文件，
+            # TigerVNC 启动时找不到这个文件直接整个起不来，5901 端口都没监听上，
+            # 这才是你这次点连接"无法连接到服务器"的真正原因。
+            if [ -s "${HOME}/.vnc/passwd" ]; then
+                chmod 600 "${HOME}/.vnc/passwd"
+                VNC_SECURITY_ARGS="-SecurityTypes VncAuth -rfbauth ${HOME}/.vnc/passwd"
+            else
+                echo "[!] 密码文件生成失败（内容为空），本次先按无密码模式启动"
+            fi
         fi
-        chmod 600 "${HOME}/.vnc/passwd"
-        VNC_SECURITY_ARGS="-SecurityTypes VncAuth -rfbauth ${HOME}/.vnc/passwd"
-    else
-        VNC_SECURITY_ARGS="-SecurityTypes None --I-KNOW-THIS-IS-INSECURE"
     fi
 
 
